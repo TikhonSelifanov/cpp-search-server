@@ -2,10 +2,10 @@
 #include <iostream>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 #include <map>
 #include <cmath>
+#include <numeric>
 
 using namespace std;
 
@@ -24,6 +24,19 @@ int ReadLineWithNumber()
     cin >> result;
     ReadLine();
     return result;
+}
+
+vector<int> ReadLineWithRatings()
+{
+    int ratings_size;
+    cin >> ratings_size;
+
+    vector<int> ratings(ratings_size, 0);
+
+    for (int& rating : ratings) {
+        cin >> rating;
+    }
+    return ratings;
 }
 
 vector<string> SplitIntoWords(const string& text)
@@ -57,6 +70,7 @@ struct Document
 {
     int id;
     double relevance;
+    int rating;
 };
 
 class SearchServer
@@ -70,9 +84,12 @@ public:
         }
     }
 
-    void AddDocument(const int document_id, const string& document)
+    void AddDocument(const int document_id, const string& document, const vector<int>& ratings)
     {
         const vector<string> words = SplitIntoWordsNoStop(document);
+
+        int averageRating = ComputeAverageRating(ratings);
+        _documentRatings[document_id] = averageRating;
 
         for (const string& word : words)
         {
@@ -113,6 +130,14 @@ private:
     map<string, map<int, double>> word_to_document_freqs_;
 
     set<string> stop_words_;
+
+    map<int, int> _documentRatings;
+
+    static int ComputeAverageRating(const vector<int>& ratings)
+    {
+        int averageRating = accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size());
+        return averageRating;
+    }
 
     bool IsStopWord(const string& word) const
     {
@@ -189,9 +214,9 @@ private:
             }
         }
 
-        for (const pair<int, double>& x : document_to_relevance)
+        for (const auto& [document_id, relevance] : document_to_relevance)
         {
-            matched_documents.push_back({x.first, x.second});
+            matched_documents.push_back({document_id, relevance, _documentRatings.at(document_id)});
         }
         return matched_documents;
     }
@@ -206,7 +231,10 @@ SearchServer CreateSearchServer()
     const int document_count = ReadLineWithNumber();
     for (int document_id = 0; document_id < document_count; ++document_id)
     {
-        search_server.AddDocument(document_id, ReadLine());
+        const string document = ReadLine();
+        const vector<int> ratings = ReadLineWithRatings();
+        search_server.AddDocument(document_id, document, ratings);
+        ReadLine();
     }
 
     return search_server;
@@ -217,9 +245,8 @@ int main()
     const SearchServer search_server = CreateSearchServer();
 
     const string query = ReadLine();
-    for (const auto& [document_id, relevance] : search_server.FindTopDocuments(query))
+    for (const auto& [document_id, relevance, rating] : search_server.FindTopDocuments(query))
     {
-        cout << "{ document_id = "s << document_id << ", "
-             << "relevance = "s << relevance << " }"s << endl;
+        cout << "{ document_id = "s << document_id << ", " << "relevance = "s << relevance << ", " << "rating = " << rating << " }"s << endl;
     }
 }
