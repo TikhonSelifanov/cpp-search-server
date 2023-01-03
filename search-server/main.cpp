@@ -228,25 +228,31 @@ private:
         return words;
     }
 
+    void ParseQueryWord(const string& word, Query queryWords) const
+    {
+        if (word[0] == '-') // минус-слово
+        {
+            string noMinus = word.substr(1);
+            if (!IsStopWord(noMinus))
+            {
+                queryWords.minusWords.insert(noMinus);
+            }
+        }
+        else // плюс-слово
+        {
+            queryWords.plusWords.insert(word);
+        }
+    }
+
     Query ParseQuery(const string& text) const
     {
         Query queryWords;
         for (string& word : SplitIntoWordsNoStop(text))
         {
-            if (word[0] == '-') // минус-слово
-            {
-                string noMinus = word.substr(1);
-                if (!IsStopWord(noMinus))
-                {
-                    queryWords.minusWords.insert(noMinus);
-                }
-            }
-            else // плюс-слово
-            {
-                queryWords.plusWords.insert(word);
-            }
+            ParseQueryWord(word, queryWords);
         }
-        // если есть минус-слово и плюс-слово одинаковы -> убираем плюс-слово
+
+        // если минус-слово и плюс-слово одинаковы -> убираем плюс-слово
         for (const string& minusWord : queryWords.minusWords)
         {
             if (queryWords.plusWords.count(minusWord) != 0)
