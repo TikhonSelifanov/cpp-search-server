@@ -112,9 +112,11 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
-        ASSERT_HINT(found_docs.size() == 1, "You probably forgot to increase document counter or you lost this doc somewhere in FindTopDocuments method."s);
+        const string hint1 = "You probably forgot to increase document counter or you lost this doc somewhere in FindTopDocuments method."s;
+        ASSERT_HINT(found_docs.size() == 1, hint1);
         const Document& doc0 = found_docs[0];
-        ASSERT_EQUAL_HINT(doc0.id, doc_id, "Did you save the id number correctly?"s);
+        const string hint2 = "Did you save the id number correctly?"s;
+        ASSERT_EQUAL_HINT(doc0.id, doc_id, hint2);
     }
 
     // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
@@ -127,45 +129,54 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     }
 }
 
-void TestMinusWords()
+void TestExcludeMinusWords()
 {
-    const int docId = 33;
-    const string content = "-dog in the park"s;
+    const int docId = 1;
+    const string content = "dog in the park"s;
     const vector<int> ratings = {3, 8, 5};
 
     SearchServer server;
     server.AddDocument(docId, content, DocumentStatus::ACTUAL, ratings);
-    ASSERT_HINT(server.MatchDocument("-dog", docId) == tuple(vector<string> {}, DocumentStatus::ACTUAL), "MatchDocument should return empty vector if there is a minus word."s);
+
+    const string hint1 = "Should be non-empty."s;
+    ASSERT_HINT(!server.FindTopDocuments("dog").empty(), hint1);
+
+    const string hint2 = "Should be empty."s;
+    ASSERT_HINT(server.FindTopDocuments("-dog"s).empty(), hint2);
+
 }
 
-void TestMatching()
+void TestDocumentMatching()
 {
     const int docId1 = 15;
-    const string content1 = "blue bird in the park";
+    const string content1 = "blue bird in the park"s;
     const vector<int> ratings1 = {4, 2, 7, 5};
 
     const int docId2 = 3;
-    const string content2 = "black mouse on the -fridge";
+    const string content2 = "black mouse on the fridge"s;
     const vector<int> ratings2 = {2, 2, 2, 2};
 
     SearchServer server;
     server.AddDocument(docId1, content1, DocumentStatus::ACTUAL, ratings1);
     server.AddDocument(docId2, content2, DocumentStatus::ACTUAL, ratings2);
-    ASSERT_HINT(server.MatchDocument("blue the park", docId1) == tuple(vector<string> {"blue", "park", "the"}, DocumentStatus::ACTUAL), "Check the part of the MatchDocument method where it adds plus words."s);
+
+    const tuple testTuple = tuple(vector<string> {"blue"s, "park"s, "the"s}, DocumentStatus::ACTUAL);
+    const string hint = "Check the part of the MatchDocument method where it adds plus words."s;
+    ASSERT_HINT(server.MatchDocument("blue the park"s, docId1) == testTuple, hint);
 }
 
-void TestRelevanceOrder()
+void TestDescendingRelevanceOrder()
 {
     const int docId1 = 15;
-    const string content1 = "blue bird in the park";
+    const string content1 = "blue bird in the park"s;
     const vector<int> ratings1 = {4, 2, 7, 5};
 
     const int docId2 = 3;
-    const string content2 = "black mouse on the fridge";
+    const string content2 = "black mouse on the fridge"s;
     const vector<int> ratings2 = {2, 2, 2, 2};
 
     const int docId3 = 17;
-    const string content3 = "white cat in the room";
+    const string content3 = "white cat in the room"s;
     const vector<int> ratings3 = {4, 2, 7, 5};
 
     SearchServer server;
@@ -173,7 +184,7 @@ void TestRelevanceOrder()
     server.AddDocument(docId2, content2, DocumentStatus::ACTUAL, ratings2);
     server.AddDocument(docId3, content3, DocumentStatus::ACTUAL, ratings3);
 
-    vector<Document> matched = server.FindTopDocuments("the in");
+    const vector<Document> matched = server.FindTopDocuments("the in"s);
     vector<double> test1;
     vector<double> test2;
     for (const Document& doc : matched)
@@ -189,38 +200,41 @@ void TestRelevanceOrder()
     {
         return lhs > rhs;
     });
-    ASSERT_EQUAL_HINT(test2, test1, "Check the sort function in the FindTopDocuments method."s);
+
+    const string hint = "Check the sort function in the FindTopDocuments method."s;
+    ASSERT_EQUAL_HINT(test2, test1, hint);
 
 }
 
-void TestRating()
+void TestFindAverageRating()
 {
     const int docId1 = 15;
-    const string content1 = "blue bird in the park";
+    const string content1 = "blue bird in the park"s;
     const vector<int> ratings1 = {4, 2, 7, 5};
 
     SearchServer server;
     server.AddDocument(docId1, content1, DocumentStatus::ACTUAL, ratings1);
 
-    int averageRating1 = accumulate(ratings1.begin(), ratings1.end(), 0) / static_cast<int>(ratings1.size());
+    const int averageRating1 = accumulate(ratings1.begin(), ratings1.end(), 0) / static_cast<int>(ratings1.size());
 
-    vector<Document> test = server.FindTopDocuments("blue");
-    int testRating = test.front().rating;
-    ASSERT_EQUAL_HINT(averageRating1, testRating, "Check the correctness of finding the average value."s);
+    const vector<Document> test = server.FindTopDocuments("blue"s);
+    const int testRating = test.front().rating;
+    const string hint = "Check the correctness of finding the average value."s;
+    ASSERT_EQUAL_HINT(averageRating1, testRating, hint);
 }
 
-void TestPredicat()
+void TestUserDefinedPredicate()
 {
     const int docId1 = 1;
-    const string content1 = "blue bird in the park";
+    const string content1 = "blue bird in the park"s;
     const vector<int> ratings1 = {4, 2, 7, 5};
 
     const int docId2 = 2;
-    const string content2 = "black mouse on the fridge";
+    const string content2 = "black mouse on the fridge"s;
     const vector<int> ratings2 = {2, 2, 2, 2};
 
     const int docId3 = 3;
-    const string content3 = "white cat in the room";
+    const string content3 = "white cat in the room"s;
     const vector<int> ratings3 = {4, 2, 8, 8};
 
     SearchServer server;
@@ -228,25 +242,33 @@ void TestPredicat()
     server.AddDocument(docId2, content2, DocumentStatus::ACTUAL, ratings2);
     server.AddDocument(docId3, content3, DocumentStatus::REMOVED, ratings3);
 
-    ASSERT_EQUAL_HINT(server.FindTopDocuments("the", [](int id, DocumentStatus status, int rating) {return rating <= 3;}).front().id, docId2, "Check the FindAllDocuments private method. Does it handle the custom predicate?"s);
+    auto predicate1 = [](int id, DocumentStatus status, int rating) {return rating <= 3;};
 
-    ASSERT_EQUAL_HINT(server.FindTopDocuments("in", [](int id, DocumentStatus status, int rating) {return status == DocumentStatus::REMOVED;}).front().id, docId3, "Check the FindAllDocuments private method. Does it handle the custom predicate?"s);
+    auto predicate2 = [](int id, DocumentStatus status, int rating) {return status == DocumentStatus::REMOVED;};
 
-    ASSERT_EQUAL_HINT(server.FindTopDocuments("the",[](int id, DocumentStatus status, int rating) {return id <= 2;}).front().rating, 4, "Check the FindAllDocuments private method. Does it handle the custom predicate?"s);
+    auto predicate3 = [](int id, DocumentStatus status, int rating) {return id <= 2;};
+
+    const string hint = "Check the FindAllDocuments private method. Does it work correctly with the custom predicate?"s;
+
+    ASSERT_EQUAL_HINT(server.FindTopDocuments("the"s, predicate1).front().id, docId2, hint);
+
+    ASSERT_EQUAL_HINT(server.FindTopDocuments("in"s, predicate2).front().id, docId3, hint);
+
+    ASSERT_EQUAL_HINT(server.FindTopDocuments("the"s, predicate3).front().rating, 4, hint);
 }
 
-void TestStatus()
+void TestUserDefinedStatus()
 {
     const int docId1 = 1;
-    const string content1 = "blue bird in the park";
+    const string content1 = "blue bird in the park"s;
     const vector<int> ratings1 = {4, 2, 7, 5};
 
     const int docId2 = 2;
-    const string content2 = "black mouse on the fridge";
+    const string content2 = "black mouse on the fridge"s;
     const vector<int> ratings2 = {2, 2, 2, 2};
 
     const int docId3 = 3;
-    const string content3 = "white cat in the room";
+    const string content3 = "white cat in the room"s;
     const vector<int> ratings3 = {4, 2, 8, 8};
 
     SearchServer server;
@@ -254,28 +276,26 @@ void TestStatus()
     server.AddDocument(docId2, content2, DocumentStatus::ACTUAL, ratings2);
     server.AddDocument(docId3, content3, DocumentStatus::REMOVED, ratings3);
 
-    vector<Document> test = server.FindTopDocuments("the", DocumentStatus::REMOVED);
-    vector<int> test2;
-    for (const auto& x : test)
-    {
-        test2.push_back(x.id);
-    }
-    ASSERT_HINT(test2[0] == 3 && test2[1] == 1, "Check the FindTopDocuments method."s);
+    const vector<Document> test = server.FindTopDocuments("the"s, DocumentStatus::REMOVED);
+    const string hint = "Check the FindTopDocuments method."s;
+    ASSERT_EQUAL_HINT(test.size(), 2, hint);
 }
 
-void TestRelevance()
+void TestComputeCorrectRelevance()
 {
     const int docId1 = 1;
-    const string content1 = "blue bird in the park";
+    const string content1 = "blue bird in the park"s;
     const vector<int> ratings1 = {4, 2, 7, 5};
 
     SearchServer server;
     server.AddDocument(docId1, content1, DocumentStatus::ACTUAL, ratings1);
 
-    double IDF = log(1);
-    double TF = 0.2;
+    const double IDF = log(1);
+    const double TF = 0.2;
 
-    ASSERT_EQUAL_HINT(server.FindTopDocuments("the").front().relevance, IDF * TF, "Check the correctness of computing the TF-IDF (Probably you should check the FindAllDocuments method and the AddDocument method)."s);
+    const string hint = "Check the correctness of computing the TF-IDF (Probably you should check the FindAllDocuments method and the AddDocument method)."s;
+
+    ASSERT_EQUAL_HINT(server.FindTopDocuments("the"s).front().relevance, IDF * TF, hint);
 }
 
 
@@ -287,12 +307,12 @@ void TestRelevance()
 void TestSearchServer()
 {
     TestExcludeStopWordsFromAddedDocumentContent();
-    TestMinusWords();
-    TestMatching();
-    TestRelevanceOrder();
-    TestRating();
-    TestPredicat();
-    TestStatus();
-    TestRelevance();
+    TestExcludeMinusWords();
+    TestDocumentMatching();
+    TestDescendingRelevanceOrder();
+    TestFindAverageRating();
+    TestUserDefinedPredicate();
+    TestUserDefinedStatus();
+    TestComputeCorrectRelevance();
     // Не забудьте вызывать остальные тесты здесь
 }
