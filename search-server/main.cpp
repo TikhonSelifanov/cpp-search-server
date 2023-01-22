@@ -130,27 +130,15 @@ public:
 
     int GetDocumentId(int index) const
     {
-        if (index >= 0 && index < document_count_)
+        if (index < 0 || index > document_count_)
         {
-            int res = 0;
-            for (const auto& [id, stat] : id_doc_info_) // поменял на unordered_map
-            {
-                if (res == index)
-                {
-                    res = id;
-                    return res;
-                }
-                ++res;
-            }
+            throw out_of_range("Id is out of range"s);
         }
-        throw out_of_range("Id is out of range"s);
-        return SearchServer::INVALID_DOCUMENT_ID;
+        return docs_id_[index];
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const
     {
-        CheckIsValidAndMinuses(raw_query);
-
         vector<string> plus_words;
         Query query_words = ParseQuery(raw_query);
 
@@ -190,6 +178,8 @@ public:
             throw invalid_argument("Document with such an id already exists"s);
         }
 
+        docs_id_.push_back(document_id);
+
         vector<string> words = SplitIntoWordsNoStop(document);
 
         int averageRating = ComputeAverageRating(ratings);
@@ -208,8 +198,7 @@ public:
     template <typename T>
     vector<Document> FindTopDocuments(const string& raw_query, T predicate) const // задано условие
     {
-        CheckIsValidAndMinuses(raw_query);
-        const Query query_words = ParseQuery(raw_query);
+        const Query query_words = ParseQuery(raw_query); // проверку на минусы и валидность закинул в ParseQueryWord
         vector<Document> matched_documents = FindAllDocuments(query_words, predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
@@ -254,6 +243,7 @@ private:
         set<string> plus_words;
     };
 
+    vector<int> docs_id_;
 
     unordered_map<int, DocumentInfo> id_doc_info_;
 
@@ -263,26 +253,21 @@ private:
 
     const set<string> stop_words_;
 
-    void CheckIsValidAndMinuses(const string& raw_query) const
+    void CheckIsValidAndMinuses(const string& query_word) const
     {
-        vector<string> words = SplitIntoWords(raw_query);
-
-        for (const string& word : words)
+        if (DetectTwoMinus(query_word))
         {
-            if (DetectTwoMinus(word))
-            {
-                throw invalid_argument("Two minuses before one word"s);
-            }
+            throw invalid_argument("Two minuses before one word"s);
+        }
 
-            if (DetectNoWordAfterMinus(word))
-            {
-                throw invalid_argument("No word after minus"s);
-            }
+        if (DetectNoWordAfterMinus(query_word))
+        {
+            throw invalid_argument("No word after minus"s);
+        }
 
-            if (!IsValidWord(word))
-            {
-                throw invalid_argument("Query contains symbols with codes from 0 to 31"s);
-            }
+        if (!IsValidWord(query_word))
+        {
+            throw invalid_argument("Query contains symbols with codes from 0 to 31"s);
         }
     }
 
@@ -327,6 +312,8 @@ private:
 
     void ParseQueryWord(const string& word, Query& query_words) const
     {
+        CheckIsValidAndMinuses(word);
+
         if (word[0] == '-') // минус-слово
         {
             string no_minus = word.substr(1);
