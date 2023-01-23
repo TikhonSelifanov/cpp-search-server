@@ -148,7 +148,7 @@ public:
             {
                 if (word_to_document_id_freqs_.at(minus_word).find(document_id) != word_to_document_id_freqs_.at(minus_word).end())
                 {
-                    return tuple(vector<string> {}, id_doc_info_.at(document_id).status);
+                    return {vector<string> {}, id_doc_info_.at(document_id).status};
                 }
             }
         }
@@ -163,7 +163,7 @@ public:
                 }
             }
         }
-        return tuple(plus_words, id_doc_info_.at(document_id).status);
+        return {plus_words, id_doc_info_.at(document_id).status};
     }
 
     void AddDocument(const int document_id, const string& document, const DocumentStatus& stat, const vector<int>& ratings)
@@ -330,20 +330,12 @@ private:
 
     static bool DetectTwoMinus(const string& query_word)
     {
-        if (query_word.substr(0, 2) == "--"s)
-        {
-            return true;
-        }
-        return false;
+        return query_word.substr(0, 2) == "--"s;
     }
 
     static bool DetectNoWordAfterMinus(const string& query_word)
     {
-        if (query_word == "-"s)
-        {
-            return true;
-        }
-        return false;
+        return query_word == "-"s;
     }
 
     static bool IsValidWord(const string& query_word)
@@ -373,6 +365,11 @@ private:
         return query_words;
     }
 
+    inline double ComputeIDF(const string& plus_word) const
+    {
+        return log(document_count_ * 1.0 / word_to_document_id_freqs_.at(plus_word).size());
+    }
+
     template <typename T>
     vector<Document> FindAllDocuments(const Query& query_words, T predicate) const
     {
@@ -383,10 +380,10 @@ private:
         {
             if (word_to_document_id_freqs_.find(plus_word) != word_to_document_id_freqs_.end()) // нашли плюс-слово
             {
-                double IDF = log(document_count_ * 1.0 / word_to_document_id_freqs_.at(plus_word).size());
-                for (const pair<int, double>& doc_id_and_TF : word_to_document_id_freqs_.at(plus_word)) // итерируем по документам
+                double IDF = ComputeIDF(plus_word);
+                for (const auto& [id, TF] : word_to_document_id_freqs_.at(plus_word)) // итерируем по документам
                 {
-                    document_to_relevance[doc_id_and_TF.first] += IDF * doc_id_and_TF.second; // аккумулируем TF * IDF
+                    document_to_relevance[id] += IDF * TF; // аккумулируем TF * IDF
                 }
             }
         }
@@ -395,9 +392,9 @@ private:
         {
             if (word_to_document_id_freqs_.find(minus_word) != word_to_document_id_freqs_.end())
             {
-                for (const pair<int, double>& doc_id_and_TF : word_to_document_id_freqs_.at(minus_word))
+                for (const auto& [id, TF] : word_to_document_id_freqs_.at(minus_word))
                 {
-                    document_to_relevance.erase(doc_id_and_TF.first);
+                    document_to_relevance.erase(id);
                 }
             }
         }
