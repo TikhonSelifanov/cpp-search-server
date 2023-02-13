@@ -23,13 +23,22 @@ void PrintRange(T begin, T end)
     cout << endl;
 }
 
-int main() {
-    cout << "Test1"s << endl;
-    set<int> test1 = {1, 1, 1, 2, 3, 4, 5, 5};
-    PrintRange(test1.begin(), test1.end());
-    cout << "Test2"s << endl;
-    vector<int> test2 = {}; // пустой контейнер
-    PrintRange(test2.begin(), test2.end());
-    cout << "End of tests"s << endl;
+template<typename Cont, typename Elem>
+void FindAndPrint(Cont& cont, const Elem& el)
+{
+    auto iter = find_if(cont.begin(), cont.end(), [el](const Elem& elem)
+    {
+        return elem == el;
+    });
+    PrintRange(cont.begin(), iter);
+    PrintRange(iter, cont.end());
 }
 
+int main() {
+    set<int> test = {1, 1, 1, 2, 3, 4, 5, 5};
+    cout << "Test1"s << endl;
+    FindAndPrint(test, 3);
+    cout << "Test2"s << endl;
+    FindAndPrint(test, 0); // элемента 0 нет в контейнере
+    cout << "End of tests"s << endl;
+}
