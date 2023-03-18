@@ -1,76 +1,79 @@
 #include <iostream>
-#include <stdlib.h>
-#include <stdexcept>
+#include <numeric>
+#include <sstream>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
-class Tower
+template<typename T>
+void PrintRange(T begin, T end)
 {
-public:
-    // конструктор и метод SetDisks нужны, чтобы правильно создать башни
-    Tower(int disks_num)
+    bool isFirst = true;
+    for (auto x = begin; x != end; ++x)
     {
-        FillTower(disks_num);
-    }
-
-    int GetDisksNum() const
-    {
-        return disks_.size();
-    }
-
-    void SetDisks(int disks_num)
-    {
-        FillTower(disks_num);
-    }
-
-    // добавляем диск на верх собственной башни
-    // обратите внимание на исключение, которое выбрасывается этим методом
-    void AddToTop(int disk)
-    {
-        int top_disk_num = disks_.size() - 1;
-        if (0 != disks_.size() && disk >= disks_[top_disk_num])
+        if (isFirst)
         {
-            throw invalid_argument("Невозможно поместить большой диск на маленький");
+            cout << *x;
+            isFirst = false;
+            continue;
+        }
+        cout << ' ' << *x;
+    }
+    cout << endl;
+}
+
+template<typename Iter>
+void Merge(Iter beg, Iter mid, Iter end)
+{
+    std::vector<typename Iter::value_type> temp;
+
+    Iter a;
+    Iter left = beg;
+    Iter right = mid;
+    while (left != mid && right != end)
+    {
+        if (*right < *left)
+        {
+            temp.emplace_back(*right++);
         }
         else
         {
-            disks_.push_back(disk);
+            temp.emplace_back(*left++);
         }
     }
-    // disks_num - количество перемещаемых дисков
-    // destination - конечная башня для перемещения
-    // buffer - башня, которую нужно использовать в качестве буфера для дисков
-    void MoveDisks(int disks_num, Tower& destination, Tower& buffer)
+    temp.insert(temp.end(), left, mid);
+    temp.insert(temp.end(), right, end);
+
+    std::move(temp.begin(), temp.end(), beg);
+}
+
+template <typename RandomIt>
+void MergeSort(RandomIt range_begin, RandomIt range_end)
+{
+    int size = distance(range_begin, range_end);
+    auto mid = next(range_begin, size / 2);
+
+    if (size <= 1)
     {
-        if (disks_num == 0)
-        {
-            return;
-        }
-        MoveDisks(disks_num - 1, buffer, destination);
-
-        destination.AddToTop(disks_.back());
-        disks_.pop_back();
-
-        buffer.MoveDisks(disks_num - 1, destination, *this);
+        return;
     }
-private:
-    vector<int> disks_;
 
-    // используем приватный метод FillTower, чтобы избежать дубликации кода
-    void FillTower(int disks_num)
-    {
-        for (int i = disks_num; i > 0; i--)
-        {
-            disks_.push_back(i);
-        }
-    }
-};
+    MergeSort(range_begin, mid);
+    MergeSort(mid, range_end);
+    Merge(range_begin, mid, range_end);
+}
 
-void SolveHanoi(vector<Tower>& towers) {
-    int disks_num = towers[0].GetDisksNum();
-    // запускаем рекурсию
-    // просим переложить все диски на последнюю башню
-    // с использованием средней башни как буфера
-    towers[0].MoveDisks(disks_num, towers[2], towers[1]);
+int main() {
+    vector<int> test_vector = {5, 2, 3, 1};
+    // iota             -> http://ru.cppreference.com/w/cpp/algorithm/iota
+    // Заполняет диапазон последовательно возрастающими значениями
+
+    // Выводим вектор до сортировки
+    PrintRange(test_vector.begin(), test_vector.end());
+    // Сортируем вектор с помощью сортировки слиянием
+    MergeSort(test_vector.begin(), test_vector.end());
+    // Выводим результат
+    PrintRange(test_vector.begin(), test_vector.end());
+    return 0;
 }
