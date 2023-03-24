@@ -1,7 +1,6 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include "document.h"
 
 template <typename Iterator>
 struct IteratorRange
@@ -29,13 +28,6 @@ private:
     Iterator left_;
     Iterator right_;
 };
-
-std::ostream& operator<<(std::ostream& out, const Document& doc)
-{
-    out << "{ document_id = " << doc.id << ", relevance = " << doc.relevance << ", rating = " << doc.rating << " }";
-    return out;
-}
-
 
 template<typename Iterator>
 std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& iter)
