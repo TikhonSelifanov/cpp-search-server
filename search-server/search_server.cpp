@@ -1,17 +1,48 @@
 #include "search_server.h"
 
+using namespace std::literals;
+
 int SearchServer::GetDocumentCount() const
 {
     return document_count_;
 }
 
-int SearchServer::GetDocumentId(int index) const
+const std::vector<int>::iterator SearchServer::begin()
 {
-    if (index < 0 || index > document_count_)
+    return docs_id_.begin();
+}
+
+const std::vector<int>::iterator SearchServer::end()
+{
+    return docs_id_.end();
+}
+
+const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const
+{
+    return id_to_word_freqs_.at(document_id);
+}
+
+void SearchServer::RemoveDocument(int document_id)
+{
+    for (auto& [word, freqs] : id_to_word_freqs_.at(document_id))
     {
-        throw std::out_of_range("Id is out of range");
+        word_to_document_id_freqs_.at(word).erase(document_id);
+        if (word_to_document_id_freqs_.at(word).empty())
+        {
+            word_to_document_id_freqs_.erase(word);
+        }
     }
-    return docs_id_[index];
+    id_doc_info_.erase(document_id);
+    id_to_word_freqs_.erase(document_id);
+    --document_count_;
+    for (auto it = docs_id_.begin(); it != docs_id_.end(); ++it)
+    {
+        if (*it == document_id)
+        {
+            docs_id_.erase(it);
+            break;
+        }
+    }
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const // задан статус
@@ -28,17 +59,17 @@ void SearchServer::CheckIsValidAndMinuses(const std::string& query_word) const
 {
     if (DetectTwoMinus(query_word))
     {
-        throw std::invalid_argument("Two minuses before one word");
+        throw std::invalid_argument("Two minuses before one word"s);
     }
 
     if (DetectNoWordAfterMinus(query_word))
     {
-        throw std::invalid_argument("No word after minus");
+        throw std::invalid_argument("No word after minus"s);
     }
 
     if (!IsValidWord(query_word))
     {
-        throw std::invalid_argument("Query contains symbols with codes from 0 to 31");
+        throw std::invalid_argument("Query contains symbols with codes from 0 to 31"s);
     }
 }
 
@@ -60,7 +91,7 @@ std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& t
     {
         if (!IsValidWord(word))
         {
-            const std::string hint = "Invalid word: " + word;
+            const std::string hint = "Invalid word: "s + word;
             throw std::invalid_argument(hint);
         }
 
@@ -165,12 +196,12 @@ void SearchServer::AddDocument(const int document_id, const std::string& documen
 {
     if (document_id < 0)
     {
-        throw std::invalid_argument("Id is less than 0");
+        throw std::invalid_argument("Id is less than 0"s);
     }
 
     if (id_doc_info_.find(document_id) != id_doc_info_.end())
     {
-        throw std::invalid_argument("Document with such an id already exists");
+        throw std::invalid_argument("Document with such an id already exists"s);
     }
 
     docs_id_.push_back(document_id);
@@ -186,6 +217,7 @@ void SearchServer::AddDocument(const int document_id, const std::string& documen
     {
         // аккумулируем TF для всех слов
         word_to_document_id_freqs_[word][document_id] += 1.0 / words.size();
+        id_to_word_freqs_[document_id][word] += 1.0 / words.size();
     }
     ++document_count_;
 }

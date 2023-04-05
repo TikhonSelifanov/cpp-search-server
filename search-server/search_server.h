@@ -8,6 +8,7 @@
 #include <cmath>
 #include "string_processing.h"
 #include "document.h"
+//#include "log_duration.h"
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double EPSILON = 1e-6;
@@ -28,7 +29,13 @@ public:
 
     int GetDocumentCount() const;
 
-    int GetDocumentId(int index) const;
+    const std::vector<int>::iterator begin();
+
+    const std::vector<int>::iterator end();
+
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
 
@@ -61,6 +68,8 @@ private:
     int document_count_ = 0;
 
     std::map<std::string, std::map<int, double>> word_to_document_id_freqs_;
+
+    std::map<int, std::map<std::string, double>> id_to_word_freqs_;
 
     const std::set<std::string> stop_words_;
 
@@ -96,9 +105,10 @@ template <typename StringContainer>
 SearchServer::SearchServer(const StringContainer& stop_words)
     : stop_words_(MakeUniqueNonEmptyStrings(stop_words))
 {
+    using namespace std::literals;
     if (any_of(stop_words_.begin(), stop_words_.end(), [](const std::string& word) {return !IsValidWord(word);}))
     {
-        throw std::invalid_argument("Word contains symbols with codes from 0 to 31");
+        throw std::invalid_argument("Word contains symbols with codes from 0 to 31"s);
     }
 }
 
