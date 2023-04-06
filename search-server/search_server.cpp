@@ -4,22 +4,30 @@ using namespace std::literals;
 
 int SearchServer::GetDocumentCount() const
 {
-    return document_count_;
+    return docs_id_.size();
 }
 
-const std::vector<int>::iterator SearchServer::begin()
+const std::set<int>::iterator SearchServer::begin()
 {
     return docs_id_.begin();
 }
 
-const std::vector<int>::iterator SearchServer::end()
+const std::set<int>::iterator SearchServer::end()
 {
     return docs_id_.end();
 }
 
 const std::map<std::string, double>& SearchServer::GetWordFrequencies(int document_id) const
 {
-    return id_to_word_freqs_.at(document_id);
+    static const std::map<std::string, double> empty = {};
+    if (id_to_word_freqs_.count(document_id) != 0)
+    {
+        return id_to_word_freqs_.at(document_id);
+    }
+    else
+    {
+        return empty;
+    }
 }
 
 void SearchServer::RemoveDocument(int document_id)
@@ -34,7 +42,6 @@ void SearchServer::RemoveDocument(int document_id)
     }
     id_doc_info_.erase(document_id);
     id_to_word_freqs_.erase(document_id);
-    --document_count_;
     for (auto it = docs_id_.begin(); it != docs_id_.end(); ++it)
     {
         if (*it == document_id)
@@ -103,8 +110,9 @@ std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& t
     return words;
 }
 
-void SearchServer::ParseQueryWord(const std::string& word, Query& query_words) const
+SearchServer::Query SearchServer::ParseQueryWord(const std::string& word) const
 {
+    Query query_words;
     CheckIsValidAndMinuses(word);
 
     if (word[0] == '-') // минус-слово
@@ -119,6 +127,7 @@ void SearchServer::ParseQueryWord(const std::string& word, Query& query_words) c
     {
         query_words.plus_words.insert(word);
     }
+    return query_words;
 }
 
 bool SearchServer::DetectTwoMinus(const std::string& query_word)
@@ -138,13 +147,18 @@ bool SearchServer::IsValidWord(const std::string& query_word)
         return c >= '\0' && c < ' ';
     });
 }
+void SearchServer::Query::insert(Query query_words)
+{
+    minus_words.merge(query_words.minus_words);
+    plus_words.merge(query_words.plus_words);
+}
 
 SearchServer::Query SearchServer::ParseQuery(const std::string& text) const
 {
     Query query_words;
-    for (std::string& word : SplitIntoWordsNoStop(text))
+    for (const std::string& word : SplitIntoWordsNoStop(text))
     {
-        ParseQueryWord(word, query_words);
+        query_words.insert(ParseQueryWord(word));
     }
 
     // если минус-слово и плюс-слово одинаковы -> убираем плюс-слово
@@ -160,7 +174,7 @@ SearchServer::Query SearchServer::ParseQuery(const std::string& text) const
 
 double SearchServer::ComputeIDF(const std::string& plus_word) const
 {
-    return log(document_count_ * 1.0 / word_to_document_id_freqs_.at(plus_word).size());
+    return log(docs_id_.size() * 1.0 / word_to_document_id_freqs_.at(plus_word).size());
 }
 
 std::tuple<std::vector<std::string>, DocumentStatus> SearchServer::MatchDocument(const std::string& raw_query, int document_id) const
@@ -204,7 +218,7 @@ void SearchServer::AddDocument(const int document_id, const std::string& documen
         throw std::invalid_argument("Document with such an id already exists"s);
     }
 
-    docs_id_.push_back(document_id);
+    docs_id_.insert(document_id);
 
     std::vector<std::string> words = SplitIntoWordsNoStop(document);
 
@@ -219,5 +233,4 @@ void SearchServer::AddDocument(const int document_id, const std::string& documen
         word_to_document_id_freqs_[word][document_id] += 1.0 / words.size();
         id_to_word_freqs_[document_id][word] += 1.0 / words.size();
     }
-    ++document_count_;
 }

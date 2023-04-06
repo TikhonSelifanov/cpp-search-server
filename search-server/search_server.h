@@ -16,8 +16,6 @@ const double EPSILON = 1e-6;
 class SearchServer
 {
 public:
-    inline static constexpr int INVALID_DOCUMENT_ID = -1;
-
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words);
 
@@ -29,9 +27,8 @@ public:
 
     int GetDocumentCount() const;
 
-    const std::vector<int>::iterator begin();
-
-    const std::vector<int>::iterator end();
+    const std::set<int>::iterator begin();
+    const std::set<int>::iterator end();
 
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
@@ -43,9 +40,7 @@ public:
 
     template <typename T>
     std::vector<Document> FindTopDocuments(const std::string& raw_query, T predicate) const;
-
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
-
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
 private:
@@ -59,41 +54,31 @@ private:
     {
         std::set<std::string> minus_words;
         std::set<std::string> plus_words;
+        void insert(Query query_words);
     };
 
-    std::vector<int> docs_id_;
-
+    std::set<int> docs_id_;
     std::unordered_map<int, DocumentInfo> id_doc_info_;
-
-    int document_count_ = 0;
-
     std::map<std::string, std::map<int, double>> word_to_document_id_freqs_;
-
     std::map<int, std::map<std::string, double>> id_to_word_freqs_;
 
     const std::set<std::string> stop_words_;
-
-    void CheckIsValidAndMinuses(const std::string& query_word) const;
-
     template<typename Collection>
     void SetStopWords(const Collection& collection);
 
-    static int ComputeAverageRating(const std::vector<int>& ratings);
-
+    static bool IsValidWord(const std::string& query_word);
     bool IsStopWord(const std::string& word) const;
 
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
 
-    void ParseQueryWord(const std::string& word, Query& query_words) const;
-
     static bool DetectTwoMinus(const std::string& query_word);
-
     static bool DetectNoWordAfterMinus(const std::string& query_word);
-
-    static bool IsValidWord(const std::string& query_word);
+    void CheckIsValidAndMinuses(const std::string& query_word) const;
 
     Query ParseQuery(const std::string& text) const;
+    Query ParseQueryWord(const std::string& word) const;
 
+    static int ComputeAverageRating(const std::vector<int>& ratings);
     double ComputeIDF(const std::string& plus_word) const;
 
     template <typename T>
